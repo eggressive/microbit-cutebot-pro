@@ -152,7 +152,13 @@ class CutebotPro:
     # --- servo (added; protocol from v2.ts extendServoControl, ServoType=180deg) ---
     def setServo(self, index, angle):
         """Standard 180-degree servo on port S1-S4. index: 1-4, angle: 0-180."""
-        self._cmd(0x40, [index, angle])
+        if index < 1 or index > 4:
+            raise ValueError("Servo index must be 1..4")
+        if angle < 0:
+            angle = 0
+        elif angle > 180:
+            angle = 180
+        self._cmd(0x40, [index - 1, angle])
 
     # --- version ---
     def readVersions(self):
