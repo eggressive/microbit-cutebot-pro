@@ -1,0 +1,50 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "micro:bit: pack + flash (all .py in folder)",
+      "type": "shell",
+      "command": "mbpack",
+      "options": {
+        "cwd": "${fileDirname}"
+      },
+      "args": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "micro:bit: pack only (build hex, no flash)",
+      "type": "shell",
+      "command": "mbpack",
+      "options": {
+        "cwd": "${fileDirname}"
+      },
+      "args": ["--no-flash"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "micro:bit: REPL (minicom serial)",
+      "type": "shell",
+      "command": "minicom",
+      "args": ["-D", "/dev/ttyACM0", "-b", "115200"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "close": false
+      }
+    }
+  ]
+}

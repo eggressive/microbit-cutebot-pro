@@ -1,0 +1,6 @@
+# Build artifacts (1.2MB hex per build - never commit)
+*.hex
+
+# OS
+.DS_Store
+Thumbs.db

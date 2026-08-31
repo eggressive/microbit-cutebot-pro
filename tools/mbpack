@@ -1,0 +1,105 @@
+#!/home/dimitar/venv/bin/python
+"""mbpack: pack a micro:bit MicroPython project (multiple .py files) into one hex and flash it.
+
+Usage:
+  mbpack                    Pack all .py files in current dir into micropython.hex, flash to micro:bit
+  mbpack <dir>              Pack from a specific directory
+  mbpack --no-flash         Only build micropython.hex, do not flash
+  mbpack --main <file>      Which file becomes main.py (default: main.py in the dir)
+
+Requires: a Python environment with micropython-microbit-fs installed
+(bundles MicroPython 2.1.2 for micro:bit V2, 1.1.1 for V1):
+  pip install micropython-microbit-fs
+
+Rules:
+- All .py files in the directory are packed, each keeps its own name (importable modules).
+- The --main file is stored as main.py so it autoruns on boot.
+- Total filesystem budget ~20.6KB on V2; StorageFullError tells you when you exceed it.
+"""
+import argparse
+import os
+import sys
+
+import micropython_microbit_fs as mbfs
+
+HEX_FILENAME = "micropython.hex"
+
+
+def find_microbit():
+    """Same detection uflash uses: mount containing microbit marker files."""
+    if sys.platform.startswith("win"):
+        candidates = ["{}:\\".format(chr(c)) for c in range(ord("A"), ord("Z") + 1)]
+    else:
+        candidates = []
+        for base in ("/media", "/run/media", "/Volumes"):
+            if os.path.isdir(base):
+                for entry in os.listdir(base):
+                    candidates.append(os.path.join(base, entry))
+    for path in candidates:
+        if os.path.isdir(path):
+            for probe in ("MICROBIT.HTM", "MICROBIT.TXT", "DETAILS.TXT", "microbit.txt"):
+                if os.path.exists(os.path.join(path, probe)):
+                    return path
+            if os.path.basename(path).upper() == "MICROBIT":
+                return path
+    return None
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Pack multi-file MicroPython project into a micro:bit hex")
+    ap.add_argument("directory", nargs="?", default=".", help="directory with .py files (default: cwd)")
+    ap.add_argument("--main", default="main.py", help="entry file to store as main.py (default: main.py)")
+    ap.add_argument("--no-flash", action="store_true", help="build hex only, do not flash")
+    ap.add_argument("--runtime", type=int, default=2, choices=[1, 2], help="micro:bit generation (default: 2)")
+    ap.add_argument("--out", default=HEX_FILENAME, help="output hex filename (default: micropython.hex)")
+    args = ap.parse_args()
+
+    src_dir = os.path.abspath(args.directory)
+    if not os.path.isdir(src_dir):
+        sys.exit(f"error: not a directory: {src_dir}")
+
+    py_files = sorted(
+        f for f in os.listdir(src_dir)
+        if f.endswith(".py") and os.path.isfile(os.path.join(src_dir, f))
+    )
+    if not py_files:
+        sys.exit(f"error: no .py files found in {src_dir}")
+
+    main_name = args.main
+    if main_name not in py_files:
+        sys.exit(f"error: entry file {main_name!r} not found among {py_files}")
+
+    runtime = mbfs.get_bundled_hex(args.runtime).content
+    files = []
+    for name in py_files:
+        with open(os.path.join(src_dir, name), "rb") as fh:
+            content = fh.read()
+        stored_as = "main.py" if name == main_name else name
+        files.append(mbfs.File(stored_as, content))
+        print(f"  + {name} -> {stored_as} ({len(content)} bytes)")
+
+    try:
+        hex_str = mbfs.add_files(runtime, files)
+    except mbfs.StorageFullError as e:
+        sys.exit(f"error: filesystem full ({e}). micro:bit V2 has ~20.6KB for files.")
+
+    out_path = os.path.join(src_dir, args.out)
+    with open(out_path, "w") as fh:
+        fh.write(hex_str)
+    print(f"packed {len(files)} files -> {out_path} ({len(hex_str)} chars)")
+
+    if args.no_flash:
+        print("--no-flash: done.")
+        return
+
+    target = find_microbit()
+    if not target:
+        sys.exit(f"error: no micro:bit found. Hex is at {out_path}; copy it manually.")
+    dest = os.path.join(target, HEX_FILENAME)
+    with open(out_path, "r") as src, open(dest, "w") as dst:
+        dst.write(src.read())
+    print(f"flashed -> {dest}")
+
+
+if __name__ == "__main__":
+    main()
