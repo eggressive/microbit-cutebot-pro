@@ -1,6 +1,10 @@
 # Build artifacts (1.2MB hex per build - never commit)
 *.hex
 
+# VS Code: machine-specific settings must not be committed.
+# tasks.json and extensions.json ARE committed (shared project config).
+.vscode/settings.json
+
 # OS
 .DS_Store
 Thumbs.db
