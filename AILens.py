@@ -18,14 +18,32 @@ class AILENS(object):
     """AI Lens smart camera module (ELECFREAKS 'Erlang Shen' AI camera).
     """
 
-    def __init__(self):
+    def __init__(self, timeout_ms=30000):
+        """Initialize and wait for the camera to come up on I2C.
+
+        Polls until the camera streams a nonzero data frame, mirroring the
+        upstream MakeCode extension (pxt-PlanetX-AI initModule), which also
+        uses a 30s timeout. The stock MicroPython driver slept a blind 5s here,
+        which is too slow on warm boot and too short on cold boot.
+
+        :param timeout_ms: how long to wait for the camera (default 30000)
+        :return: sets self.ready to True/False
+        """
         self.__Data_buff = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.ready = False
         i2c.init()
-        sleep(5000)
-        try:
-            i2c.read(Camera_Add, 1)
-        except OSError:
-            display.scroll("Init AILens Error!")
+        start = running_time()
+        while True:
+            try:
+                if i2c.read(Camera_Add, 1)[0] != 0:
+                    self.ready = True
+                    return
+            except OSError:
+                pass  # camera not on the bus yet
+            if running_time() - start > timeout_ms:
+                display.scroll("Init AILens Error!")
+                return
+            sleep(100)
 
     def switch_function(self, func):
         """Select the camera function mode.
@@ -41,7 +59,7 @@ class AILENS(object):
         """
 
         self.__Data_buff = i2c.read(Camera_Add, 9)
-        sleep(100)
+        sleep(30)  # upstream MakeCode cameraImage() uses 30ms, not the stock 100ms
 
     def get_ball_color(self):
         """Detect the color of the ball in the current frame.
