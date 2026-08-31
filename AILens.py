@@ -24,7 +24,7 @@ class AILENS(object):
         sleep(5000)
         try:
             i2c.read(Camera_Add, 1)
-        except:
+        except OSError:
             display.scroll("Init AILens Error!")
 
     def switch_function(self, func):
