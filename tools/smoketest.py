@@ -21,10 +21,19 @@ def headlights(r, g, b):
 
 
 def drive(left, right, ms):
-    # motor cmd 0x10, mode 2 (PWM per wheel), speeds 0..100, direction bitmask
+    # cmd 0x10 = motorControl(wheel, leftSpeed, rightSpeed, direction), per v2.ts:
+    # byte 1 is a WHEEL SELECTOR (0=left, 1=right, 2=all), not a mode.
+    # 2 = all wheels. Zero speeds = the canonical V2 stop (there is no
+    # dedicated HALT command; stopImmediately in the driver sends [2,0,0,0]).
     direction = (0x01 if left < 0 else 0) | (0x02 if right < 0 else 0)
     cmd(0x10, [2, abs(left), abs(right), direction])
     sleep(ms)
+
+
+def stop():
+    # Byte-identical to the driver's stopImmediately(CutebotProMotors.ALL):
+    # both emit FF F9 10 04 02 00 00 00.
+    cmd(0x10, [2, 0, 0, 0])
 
 
 # --- 1. I2C: the car board must answer at 0x10 ---
@@ -54,7 +63,7 @@ drive(50, 50, 1000)
 drive(-50, -50, 800)
 drive(50, 0, 600)
 drive(50, 50, 1000)
-drive(0, 0, 100)
+stop()
 
 # --- 4. Green = passed ---
 headlights(0, 255, 0)

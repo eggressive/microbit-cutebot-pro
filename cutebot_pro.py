@@ -58,7 +58,13 @@ class CutebotPro:
 
     # --- motors ---
     def pwmCruiseControl(self, speedL, speedR):
-        """Wheel speeds -100..100. Negative = reverse."""
+        """Wheel speeds -100..100. Negative = reverse.
+
+        Frame: cmd 0x10, params [wheel, leftSpeed, rightSpeed, direction].
+        Byte 1 is a WHEEL SELECTOR (0=left, 1=right, 2=all), per v2.ts
+        motorControl(). We always send 2 (all wheels); zero speeds on both
+        wheels is the canonical V2 stop (no dedicated HALT command exists).
+        """
         direction = 0
         if speedL < 0:
             direction |= 0x01
@@ -73,6 +79,11 @@ class CutebotPro:
         self._cmd(0x10, [2, 100, 100, 0x03])
 
     def stopImmediately(self, wheel):
+        """Stop the given wheels. Same frame shape as pwmCruiseControl:
+        cmd 0x10, params [wheel_selector, 0, 0, 0]. Note there is NO separate
+        HALT command in the V2 protocol: pwmCruiseControl(0, 0) emits the exact
+        same bytes as stopImmediately(ALL): FF F9 10 04 02 00 00 00.
+        """
         wheel_map = {1: 0, 2: 1, 3: 2}
         self._cmd(0x10, [wheel_map.get(wheel, 2), 0, 0, 0])
 
