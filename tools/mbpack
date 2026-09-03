@@ -26,15 +26,35 @@ HEX_FILENAME = "micropython.hex"
 
 
 def find_microbit():
-    """Same detection uflash uses: mount containing microbit marker files."""
+    """Same detection uflash uses: mount containing microbit marker files.
+
+    Covers Linux (including Fedora's /run/media/<user>/), macOS, and Windows.
+    """
     if sys.platform.startswith("win"):
         candidates = ["{}:\\".format(chr(c)) for c in range(ord("A"), ord("Z") + 1)]
     else:
         candidates = []
         for base in ("/media", "/run/media", "/Volumes"):
-            if os.path.isdir(base):
-                for entry in os.listdir(base):
-                    candidates.append(os.path.join(base, entry))
+            if not os.path.isdir(base):
+                continue
+            try:
+                base_entries = sorted(os.listdir(base))
+            except OSError:
+                continue  # e.g. /run/media/root when not root
+            for user_entry in base_entries:
+                user_path = os.path.join(base, user_entry)
+                if not os.path.isdir(user_path):
+                    continue
+                # /run/media/<user>/<mount>: descend one level for user dirs
+                if base == "/run/media":
+                    try:
+                        mounts = sorted(os.listdir(user_path))
+                    except OSError:
+                        continue
+                    for mount_entry in mounts:
+                        candidates.append(os.path.join(user_path, mount_entry))
+                else:
+                    candidates.append(user_path)
     for path in candidates:
         if os.path.isdir(path):
             for probe in ("MICROBIT.HTM", "MICROBIT.TXT", "DETAILS.TXT", "microbit.txt"):
