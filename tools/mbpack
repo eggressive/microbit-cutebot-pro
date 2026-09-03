@@ -18,11 +18,38 @@ Rules:
 """
 import argparse
 import os
+import subprocess
 import sys
 
 import micropython_microbit_fs as mbfs
 
 HEX_FILENAME = "micropython.hex"
+
+
+def _try_remount():
+    """After a flash, DAPLink re-enumerates and udisks does not always remount
+    the MICROBIT drive. If a MICROBIT block device exists but is not mounted,
+    mount it via udisksctl (Linux only, silently ignored elsewhere)."""
+    by_label = "/dev/disk/by-label/MICROBIT"
+    if not os.path.exists(by_label):
+        return
+    dev = os.path.realpath(by_label)
+    try:
+        mounted = subprocess.run(
+            ["findmnt", "-rn", "-S", dev],
+            capture_output=True, text=True, timeout=5,
+        ).stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return
+    if mounted:
+        return
+    try:
+        subprocess.run(
+            ["udisksctl", "mount", "-b", dev],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        pass
 
 
 def find_microbit():
@@ -113,6 +140,11 @@ def main():
         return
 
     target = find_microbit()
+    if not target:
+        # DAPLink may be mid re-enumeration after a previous flash; try once
+        # to remount the MICROBIT volume before giving up.
+        _try_remount()
+        target = find_microbit()
     if not target:
         sys.exit(f"error: no micro:bit found. Hex is at {out_path}; copy it manually.")
     dest = os.path.join(target, HEX_FILENAME)
