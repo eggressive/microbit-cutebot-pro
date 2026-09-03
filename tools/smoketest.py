@@ -1,6 +1,7 @@
 # Stage 1 smoke test: prove car + micro:bit chain with no extra hardware.
 # This is the ONLY file flashed for the first test. It avoids all optional modules.
-# Success = car drives a small pattern, headlights blue then green, display shows YES.
+# Success sequence: HAPPY -> "GO" -> headlights blue -> drive pattern
+#   -> headlights green, display shows YES.
 # Flash it by: tools/mbpack --main smoketest.py tools/  (from repo root)
 # (mbpack packs every .py in the target dir; for this test pack ONLY this file,
 #  so run it with tools/ as the directory and --main smoketest.py.)
