@@ -1,6 +1,6 @@
 # Police car demo (2026-09-03): drive a square, flash red/blue headlights,
 # play a two-tone siren on the micro:bit V2 built-in speaker.
-# Camera not needed. Flash with: tools/mbpack tools/ --main police.py
+# Camera not needed. Flash with: tools/flash-demo tools/police.py
 #
 # Tuning knobs (measured values, adjust to your floor/battery):
 #   DRIVE_MS  - how long each side of the square is
