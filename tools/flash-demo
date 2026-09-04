@@ -1,0 +1,14 @@
+#!/bin/sh
+# flash-demo <file.py>: pack a tools/ demo WITH the V2 driver and flash.
+# Demos like police.py import cutebot_pro, which lives in the repo root,
+# so a tools/-only pack is missing it and main.py dies with ImportError.
+# This builds a temp dir with the driver + the demo (as main.py) and packs it.
+set -e
+cd "$(dirname "$0")/.."
+[ -f "$1" ] || { echo "usage: tools/flash-demo tools/police.py"; exit 1; }
+demo="$1"
+tmp=$(mktemp -d)
+cp cutebot_pro.py "$tmp/"
+cp "$demo" "$tmp/main.py"
+tools/mbpack "$tmp" --main main.py
+rm -rf "$tmp"
