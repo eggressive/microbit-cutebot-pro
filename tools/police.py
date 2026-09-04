@@ -12,7 +12,8 @@ from microbit import *
 import music
 
 SIREN = ["A5:3", "E5:3"]     # two-tone dee-daa
-DRIVE_MS = 1200              # side length
+LAPS = 3                     # how many squares to patrol
+DRIVE_MS = 2500              # side length (~2x the first run)
 TURN_MS = 560                # ~90 deg pivot at PIVOT speed: TUNE THIS
 SPEED = 60                   # forward speed
 PIVOT = 60                   # pivot speed
@@ -39,14 +40,15 @@ music.play(SIREN, wait=False, loop=True)   # siren runs in the background
 
 car = CutebotPro()
 
-for side in range(4):
-    # forward along one side of the square
-    car.pwmCruiseControl(SPEED, SPEED)
-    police_flash(car, DRIVE_MS)
-    # pivot ~90 degrees clockwise: left wheel fwd, right wheel back
-    display.show(Image.ARROW_NE)
-    car.pwmCruiseControl(PIVOT, -PIVOT)
-    police_flash(car, TURN_MS)
+for lap in range(LAPS):
+    for side in range(4):
+        # forward along one side of the square
+        car.pwmCruiseControl(SPEED, SPEED)
+        police_flash(car, DRIVE_MS)
+        # pivot ~90 degrees clockwise: left wheel fwd, right wheel back
+        display.show(Image.ARROW_NE)
+        car.pwmCruiseControl(PIVOT, -PIVOT)
+        police_flash(car, TURN_MS)
 
 car.stopImmediately(CutebotProMotors.ALL)
 music.stop()
