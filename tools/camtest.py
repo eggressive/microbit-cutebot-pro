@@ -7,7 +7,8 @@
 # is in view, empty grid when nothing is seen.
 # Serial (USB) streams every detection for logging.
 #
-# Flash: tools/mbpack tools/ --main camtest.py
+# Flash with: tools/mbpack tools/ --main camtest.py
+# (camtest talks raw I2C, no driver import, so a tools/-only pack works)
 
 from microbit import *
 import music

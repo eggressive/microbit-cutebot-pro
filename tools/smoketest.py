@@ -2,9 +2,8 @@
 # This is the ONLY file flashed for the first test. It avoids all optional modules.
 # Success sequence: HAPPY -> "GO" -> headlights blue -> drive pattern
 #   -> headlights green, display shows YES.
-# Flash it by: tools/mbpack --main smoketest.py tools/  (from repo root)
-# (mbpack packs every .py in the target dir; for this test pack ONLY this file,
-#  so run it with tools/ as the directory and --main smoketest.py.)
+# Flash it by: tools/mbpack tools/ --main smoketest.py
+# (smoketest talks raw I2C, no driver import, so a tools/-only pack works)
 
 from microbit import *
 import music
