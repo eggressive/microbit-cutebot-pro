@@ -11,7 +11,7 @@ from cutebot_pro import *
 from microbit import *
 import music
 
-SIREN = ["A5:3", "E5:3"]     # two-tone dee-daa
+SIREN = ["A5:3", "E5:3"]     # two-tone nino-nino
 LAPS = 3                     # how many squares to patrol
 DRIVE_MS = 2500              # side length (~2x the first run)
 TURN_MS = 560                # ~90 deg pivot at PIVOT speed: TUNE THIS
