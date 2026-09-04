@@ -13,7 +13,7 @@ from cutebot_pro import *
 from microbit import *
 import music
 
-SIREN = ["A5:3", "E5:3"]     # two-tone dee-daa
+SIREN = ["A5:3", "E5:3"]     # two-tone nino-nino
 CIRCLE_MS = 5200             # ms per full loop: THE TUNING KNOB
 OUTER = 65                   # outer wheel speed in a turn
 INNER = 30                   # inner wheel speed in a turn
