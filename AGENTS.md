@@ -53,11 +53,14 @@ VS Code: Ctrl+Shift+B runs the pack+flash task on the folder of the active file
 
 ## Verification standard
 
-There is no emulator and no test runner in this repo; behavior is only provable on
+There is no emulator. Host-only regression tests use mocked hardware APIs:
+`python3 -B -m unittest discover -s tests -v`. They check command sequences and
+fault cleanup, not physical behavior. Keep tests under `tests/`, outside the
+non-recursive folders packed for the board. On-device behavior still requires
 hardware. So:
 
 - Syntax check + `mbpack --no-flash` (which also enforces the filesystem budget) is
-  the mandatory pre-commit bar.
+  the mandatory pre-commit bar. Run the host regression tests as well.
 - Anything that can be checked statically, check: I2C frame formats against
   `v2.ts`, address constants (car 0x10, camera 0x14), no CJK or em dashes anywhere.
 - Claims about on-device behavior ("servo moves", "ball tracking works") must come

@@ -21,32 +21,38 @@ NEAR_SIZE = 100   # ball this large in view = close enough, stop (wiki case-19)
 MISS_LIMIT = 5    # consecutive empty frames before we treat the ball as lost
 
 car = CutebotPro()
-ai = AILENS()
-ai.switch_function(Ball)
+try:
+    # Clear any previous motor command before waiting for the camera.
+    car.stopImmediately(CutebotProMotors.ALL)
+    ai = AILENS()
+    ai.switch_function(Ball)
 
-misses = 0
-tick = 0
+    misses = 0
+    tick = 0
 
-while True:
-    ai.get_image()
-    color = ai.get_ball_color()
-    if color == "Blue" or color == "Red":
-        misses = 0
-        d = ai.get_ball_data()
-        x = d[0]
-        size = d[2]
-        tick += 1
-        if tick % 10 == 0:
-            print("ball x", x, "size", size)
-        if size >= NEAR_SIZE:
-            car.stopImmediately(CutebotProMotors.ALL)
-        elif x < CENTER_LO:
-            car.pwmCruiseControl(60, 30)   # INVERTED from v1: toward a left ball
-        elif x > CENTER_HI:
-            car.pwmCruiseControl(30, 60)   # INVERTED from v1: toward a right ball
+    while True:
+        ai.get_image()
+        color = ai.get_ball_color()
+        if color == "Blue" or color == "Red":
+            misses = 0
+            d = ai.get_ball_data()
+            x = d[0]
+            size = d[2]
+            tick += 1
+            if tick % 10 == 0:
+                print("ball x", x, "size", size)
+            if size >= NEAR_SIZE:
+                car.stopImmediately(CutebotProMotors.ALL)
+            elif x < CENTER_LO:
+                car.pwmCruiseControl(60, 30)   # INVERTED from v1: toward a left ball
+            elif x > CENTER_HI:
+                car.pwmCruiseControl(30, 60)   # INVERTED from v1: toward a right ball
+            else:
+                car.pwmCruiseControl(60, 60)  # centered: charge
         else:
-            car.pwmCruiseControl(60, 60)  # centered: charge
-    else:
-        misses += 1
-        if misses >= MISS_LIMIT:
-            car.stopImmediately(CutebotProMotors.ALL)
+            misses += 1
+            if misses >= MISS_LIMIT:
+                car.stopImmediately(CutebotProMotors.ALL)
+finally:
+    # Also attempted on camera errors and Ctrl-C. A failed bus cannot stop motors.
+    car.stopImmediately(CutebotProMotors.ALL)
