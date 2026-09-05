@@ -10,6 +10,7 @@
 from cutebot_pro import *
 from microbit import *
 import music
+from run_controls import RunControls, RunStopped
 
 SIREN = ["A5:3", "E5:3"]     # two-tone nino-nino
 LAPS = 3                     # how many squares to patrol
@@ -20,11 +21,12 @@ PIVOT = 60                   # pivot speed
 FLASH_MS = 120               # light alternation period
 
 
-def police_flash(car, ms):
-    """Alternate left-red / right-blue for `ms` milliseconds (blocking)."""
+def police_flash(car, ms, controls):
+    """Alternate headlights while checking B and the run limit."""
     end = running_time() + ms
     left = True
     while running_time() < end:
+        controls.check()
         if left:
             car.singleHeadlights(CutebotProRGBLight.RGBL, 255, 0, 0)  # left red
             car.singleHeadlights(CutebotProRGBLight.RGBR, 0, 0, 0)     # right off
@@ -32,25 +34,44 @@ def police_flash(car, ms):
             car.singleHeadlights(CutebotProRGBLight.RGBL, 0, 0, 0)     # left off
             car.singleHeadlights(CutebotProRGBLight.RGBR, 0, 0, 255)   # right blue
         left = not left
-        sleep(FLASH_MS)
+        controls.wait(FLASH_MS)
 
 
 car = CutebotPro()
 try:
     # Start stopped; do not start the siren if the motor board is unavailable.
     car.stopImmediately(CutebotProMotors.ALL)
-    display.show("P")
-    music.play(SIREN, wait=False, loop=True)   # siren runs in the background
-
-    for lap in range(LAPS):
-        for side in range(4):
-            # forward along one side of the square
-            car.pwmCruiseControl(SPEED, SPEED)
-            police_flash(car, DRIVE_MS)
-            # pivot ~90 degrees clockwise: left wheel fwd, right wheel back
-            display.show(Image.ARROW_NE)
-            car.pwmCruiseControl(PIVOT, -PIVOT)
-            police_flash(car, TURN_MS)
+    controls = RunControls()
+    display.show("A")
+    while True:
+        controls.wait_for_start()
+        done = False
+        try:
+            controls.check()
+            display.show("P")
+            music.play(SIREN, wait=False, loop=True)
+            for lap in range(LAPS):
+                for side in range(4):
+                    controls.check()
+                    car.pwmCruiseControl(SPEED, SPEED)
+                    police_flash(car, DRIVE_MS, controls)
+                    controls.check()
+                    display.show(Image.ARROW_NE)
+                    car.pwmCruiseControl(PIVOT, -PIVOT)
+                    police_flash(car, TURN_MS, controls)
+            controls.check()
+            done = True
+        except RunStopped:
+            pass
+        finally:
+            try:
+                car.stopImmediately(CutebotProMotors.ALL)
+            finally:
+                try:
+                    music.stop()
+                finally:
+                    car.turnOffAllHeadlights()
+        display.show(Image.YES if done else "A")
 finally:
     # Attempt every cleanup even if one fails; do not hide errors or show success.
     try:
@@ -60,4 +81,3 @@ finally:
             music.stop()
         finally:
             car.turnOffAllHeadlights()
-display.show(Image.YES)

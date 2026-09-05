@@ -14,6 +14,7 @@
 
 from cutebot_pro import *
 from AILens import *
+from run_controls import RunControls, RunStopped
 
 CENTER_LO = 80    # ball x below this = left of center (wiki case-19 value)
 CENTER_HI = 144   # above this = right of center
@@ -25,34 +26,47 @@ try:
     # Clear any previous motor command before waiting for the camera.
     car.stopImmediately(CutebotProMotors.ALL)
     ai = AILENS()
+    if not ai.ready:
+        display.show(Image.NO)
+        raise OSError("AI Lens not ready; restart after checking camera")
     ai.switch_function(Ball)
-
-    misses = 0
-    tick = 0
-
+    controls = RunControls()
     while True:
-        ai.get_image()
-        color = ai.get_ball_color()
-        if color == "Blue" or color == "Red":
-            misses = 0
-            d = ai.get_ball_data()
-            x = d[0]
-            size = d[2]
-            tick += 1
-            if tick % 10 == 0:
-                print("ball x", x, "size", size)
-            if size >= NEAR_SIZE:
-                car.stopImmediately(CutebotProMotors.ALL)
-            elif x < CENTER_LO:
-                car.pwmCruiseControl(60, 30)   # INVERTED from v1: toward a left ball
-            elif x > CENTER_HI:
-                car.pwmCruiseControl(30, 60)   # INVERTED from v1: toward a right ball
-            else:
-                car.pwmCruiseControl(60, 60)  # centered: charge
-        else:
-            misses += 1
-            if misses >= MISS_LIMIT:
-                car.stopImmediately(CutebotProMotors.ALL)
+        display.show("A")
+        controls.wait_for_start()
+        display.show("B")
+        misses = 0
+        tick = 0
+        try:
+            while True:
+                controls.check()
+                ai.get_image()
+                controls.check()  # B during the read/delay wins over this frame.
+                color = ai.get_ball_color()
+                if color == "Blue" or color == "Red":
+                    misses = 0
+                    d = ai.get_ball_data()
+                    x = d[0]
+                    size = d[2]
+                    tick += 1
+                    if tick % 10 == 0:
+                        print("ball x", x, "size", size)
+                    if size >= NEAR_SIZE:
+                        car.stopImmediately(CutebotProMotors.ALL)
+                    elif x < CENTER_LO:
+                        car.pwmCruiseControl(60, 30)   # toward a left ball
+                    elif x > CENTER_HI:
+                        car.pwmCruiseControl(30, 60)   # toward a right ball
+                    else:
+                        car.pwmCruiseControl(60, 60)  # centered: charge
+                else:
+                    misses += 1
+                    if misses >= MISS_LIMIT:
+                        car.stopImmediately(CutebotProMotors.ALL)
+        except RunStopped:
+            pass  # Deliberate stop only. Hardware errors still terminate.
+        finally:
+            car.stopImmediately(CutebotProMotors.ALL)
 finally:
     # Also attempted on camera errors and Ctrl-C. A failed bus cannot stop motors.
     car.stopImmediately(CutebotProMotors.ALL)

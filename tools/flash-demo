@@ -9,6 +9,7 @@ cd "$(dirname "$0")/.."
 demo="$1"
 tmp=$(mktemp -d)
 cp cutebot_pro.py "$tmp/"
+cp run_controls.py "$tmp/"
 cp "$demo" "$tmp/main.py"
 tools/mbpack "$tmp" --main main.py
 rm -rf "$tmp"
