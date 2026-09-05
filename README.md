@@ -68,6 +68,29 @@ uflash main.py    # embeds ONE script as main.py in the hex
 Note: `uflash` always embeds exactly one file (named `main.py`) and every hex
 copy **wipes the on-device filesystem**, including files placed with `ufs put`.
 
+## Motor fault cleanup
+
+The ball chaser, police and figure-eight demos send a stop command before starting
+and attempt another stop on exit, including I2C errors and Ctrl-C. The police
+demos also attempt to stop the siren and turn off the headlights even if the
+motor-stop write fails. Errors still terminate the program; no automatic restart
+is attempted. If cleanup itself fails, that error can replace the original error.
+
+This is best-effort software cleanup, not an emergency stop: a failed I2C bus,
+hard reset or power loss can prevent it from running or reaching the motor board.
+Keep the physical power switch accessible. First test with the wheels raised:
+interrupt a moving demo with Ctrl-C and verify the wheels stop (and the police
+siren/lights switch off). Physical behaviour has not been verified by host tests.
+
+Run the host-only regression checks from the repo root:
+
+```bash
+python3 -B -m unittest discover -s tests -v
+```
+
+The tests use mocked hardware APIs and are not flashed onto the micro:bit.
+The standalone `tools/smoketest.py` is unchanged by this fix.
+
 ## Hardware
 
 - ELECFREAKS Smart Cutebot Pro (EF-08292), V2 hardware

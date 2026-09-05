@@ -35,20 +35,27 @@ def police_flash(car, ms):
         sleep(FLASH_MS)
 
 
-display.show("8")
-music.play(SIREN, wait=False, loop=True)
-
 car = CutebotPro()
+try:
+    # Start stopped; do not start the siren if the motor board is unavailable.
+    car.stopImmediately(CutebotProMotors.ALL)
+    display.show("8")
+    music.play(SIREN, wait=False, loop=True)
 
-# loop 1: circle to the LEFT (left wheel inner/slow, right wheel outer/fast)
-car.pwmCruiseControl(INNER, OUTER)
-police_flash(car, CIRCLE_MS)
+    # loop 1: circle to the LEFT (left wheel inner/slow, right wheel outer/fast)
+    car.pwmCruiseControl(INNER, OUTER)
+    police_flash(car, CIRCLE_MS)
 
-# loop 2: circle to the RIGHT (mirror the speeds), crossing the start point
-car.pwmCruiseControl(OUTER, INNER)
-police_flash(car, CIRCLE_MS)
-
-car.stopImmediately(CutebotProMotors.ALL)
-music.stop()
-car.turnOffAllHeadlights()
+    # loop 2: circle to the RIGHT (mirror the speeds), crossing the start point
+    car.pwmCruiseControl(OUTER, INNER)
+    police_flash(car, CIRCLE_MS)
+finally:
+    # Attempt every cleanup even if one fails; do not hide errors or show success.
+    try:
+        car.stopImmediately(CutebotProMotors.ALL)
+    finally:
+        try:
+            music.stop()
+        finally:
+            car.turnOffAllHeadlights()
 display.show(Image.YES)
