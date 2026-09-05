@@ -10,6 +10,7 @@ camera, driven by a BBC micro:bit V2. Programmed and flashed from Linux (Fedora)
 | `main.py` | Ball chaser demo: drives at the red/blue ball using the AI Lens |
 | `cutebot_pro.py` | Trimmed V2-only driver for the Cutebot Pro motor board (details below) |
 | `AILens.py` | AI Smart Lens driver, English docstrings (upstream is Chinese) |
+| `run_controls.py` | Shared physical A/B controls and per-run time limit |
 | `.vscode/tasks.json` | VS Code build task: Ctrl+Shift+B packs and flashes all .py files |
 
 ## Why trimmed drivers exist (the interesting part)
@@ -68,6 +69,35 @@ uflash main.py    # embeds ONE script as main.py in the hex
 Note: `uflash` always embeds exactly one file (named `main.py`) and every hex
 copy **wipes the on-device filesystem**, including files placed with `ufs put`.
 
+## Start, stop and restart
+
+The ball chaser, police and figure-eight demos use the micro:bit's physical buttons:
+
+- **A (left):** start a fresh run, not resume an interrupted movement.
+- **B (right):** stop and stay stopped until another A press. B wins if both are pressed.
+- **60-second limit:** each run stops automatically; a new A press is required.
+- Held or previously queued A presses do not restart the robot. Release the buttons
+  before pressing A again. Button presses during camera initialization are discarded.
+
+The display shows `A` when ready to start. While running, the ball chaser shows `B`
+(the stop button), police shows `P`/turn arrows and figure-eight shows `8`. A completed
+police/figure-eight run shows a checkmark and waits for a fresh A press. B or the time
+limit returns it to `A`. Stopping also turns off the police siren and headlights.
+
+The ball chaser first waits for the camera's existing readiness poll. If it times
+out, it shows an error/cross and terminates without selecting Ball mode or driving.
+Check camera power/wiring with power off, then restart the program. A camera or motor
+error during a run remains fatal; pressing A cannot silently recover from a fault.
+
+Timed demos check buttons in 20 ms sleep slices. The ball chaser checks before and
+after each camera read and its existing 30 ms delay. These are cooperative checks,
+not a guaranteed physical stop latency: a blocked I2C call can delay them.
+
+`run_controls.py` must be packed alongside the selected demo and its drivers. The
+root `mbpack` build includes it automatically. For police/figure-eight, use the
+updated `tools/flash-demo tools/police.py` or `tools/flash-demo tools/figure8.py`.
+The standalone smoke/camera diagnostics do not use these new controls.
+
 ## Motor fault cleanup
 
 The ball chaser, police and figure-eight demos send a stop command before starting
@@ -89,7 +119,7 @@ python3 -B -m unittest discover -s tests -v
 ```
 
 The tests use mocked hardware APIs and are not flashed onto the micro:bit.
-The standalone `tools/smoketest.py` is unchanged by this fix.
+The standalone `tools/smoketest.py` is unchanged by these fixes.
 
 ## Hardware
 

@@ -19,11 +19,33 @@ BALL = bytes([7, 1, 112, 100, 30, 30, 90, 1, 1])
 DEMOS = ("tools/police.py", "tools/figure8.py")
 
 
+class EndSimulation(BaseException):
+    """Stop a host-only simulation without pretending the firmware returned."""
+
+
+class ButtonStub:
+    def __init__(self, hardware, intervals):
+        self.hardware = hardware
+        self.intervals = intervals
+        self.last_check = -1
+
+    def is_pressed(self):
+        return any(start <= self.hardware.clock < end for start, end in self.intervals)
+
+    def was_pressed(self):
+        now = self.hardware.clock
+        pressed = any(self.last_check < start <= now for start, _ in self.intervals)
+        self.last_check = now
+        return pressed
+
+
 class HardwareStub:
     """Record actual driver writes and inject faults at hardware boundaries."""
 
     def __init__(self, frames=(), fail=None, exception=None,
-                 stop_fails=False, lights_off_fails=False, music_stop_fails=False):
+                 stop_fails=False, lights_off_fails=False, music_stop_fails=False,
+                 a_presses=None, b_presses=(), end_ms=70000, auto_finish=True,
+                 camera_init_reply=b'\x07', camera_ready_at=0, run_limit_ms=None):
         self.frames = iter(frames)
         self.fail = fail
         self.exception = exception if exception is not None else OSError("injected fault")
@@ -35,6 +57,19 @@ class HardwareStub:
         self.driving = False
         self.faulted = False
         self.camera_reads = 0
+        self.timed_events = []
+        self.end_ms = end_ms
+        self.auto_finish = auto_finish
+        self.completed = False
+        self.camera_init_reply = camera_init_reply
+        self.camera_ready_at = camera_ready_at
+        self.run_limit_ms = run_limit_ms
+        self.button_a = ButtonStub(self, [(100, 140)] if a_presses is None else a_presses)
+        self.button_b = ButtonStub(self, b_presses)
+
+    def record(self, event):
+        self.events.append(event)
+        self.timed_events.append((self.clock, event))
 
     def trip(self, point):
         if self.fail == point:
@@ -42,17 +77,19 @@ class HardwareStub:
             raise self.exception
 
     def scan(self):
-        self.events.append(("scan",))
+        self.record(("scan",))
         self.trip("scan")
         return [0x10, 0x14]
 
     def read(self, address, length):
         if length == 1 and address == 0x14:
-            self.events.append(("camera_init",))
-            return bytes([7])
+            self.record(("camera_init",))
+            if isinstance(self.camera_init_reply, BaseException):
+                raise self.camera_init_reply
+            return self.camera_init_reply if self.clock >= self.camera_ready_at else bytes([0])
         if length == 9 and address == 0x14:
             self.camera_reads += 1
-            self.events.append(("camera_read", self.camera_reads))
+            self.record(("camera_read", self.camera_reads))
             try:
                 frame = next(self.frames)
             except StopIteration:
@@ -66,7 +103,7 @@ class HardwareStub:
 
     def write(self, address, data):
         data = bytes(data)
-        self.events.append(("write", address, data))
+        self.record(("write", address, data))
         if address == 0x14:
             self.trip("camera_mode")
         elif data[2] == 0x10:
@@ -86,18 +123,22 @@ class HardwareStub:
 
     def sleep(self, ms):
         self.clock += ms
+        if self.clock >= self.end_ms or (self.completed and self.auto_finish and ms > 1):
+            raise EndSimulation()
         if self.driving and ms > 1:
             self.trip("sleep")
 
     def show(self, image):
-        self.events.append(("display", image))
+        self.record(("display", image))
+        if image == "YES":
+            self.completed = True
 
     def music_play(self, *args, **kwargs):
-        self.events.append(("music_play",))
+        self.record(("music_play",))
         self.trip("music_play")
 
     def music_stop(self):
-        self.events.append(("music_stop",))
+        self.record(("music_stop",))
         if self.music_stop_fails:
             raise RuntimeError("injected music-stop failure")
 
@@ -108,19 +149,24 @@ class HardwareStub:
             i2c=types.SimpleNamespace(
                 init=lambda: None, scan=self.scan, read=self.read, write=self.write),
             sleep=self.sleep, running_time=lambda: self.clock, pin8=pin, pin12=pin,
-            Image=types.SimpleNamespace(ARROW_NE="NE", YES="YES"),
+            button_a=self.button_a, button_b=self.button_b,
+            Image=types.SimpleNamespace(ARROW_NE="NE", YES="YES", NO="NO"),
             display=types.SimpleNamespace(show=self.show, scroll=self.show))
         music = types.ModuleType("music")
         music.__dict__.update(play=self.music_play, stop=self.music_stop)
         machine = types.ModuleType("machine")
         # Restore sys.modules after every execution so no test leaks its stub.
         with patch.dict(sys.modules, microbit=microbit, music=music, machine=machine):
-            for name in ("cutebot_pro", "AILens"):
+            for name in ("cutebot_pro", "AILens", "run_controls"):
+                if not (ROOT / (name + ".py")).exists():
+                    continue
                 spec = importlib.util.spec_from_file_location(name, ROOT / (name + ".py"))
                 assert spec is not None and spec.loader is not None
                 module = importlib.util.module_from_spec(spec)
                 sys.modules[name] = module
                 spec.loader.exec_module(module)
+                if name == "run_controls" and self.run_limit_ms is not None:
+                    module.__dict__["MAX_RUN_MS"] = self.run_limit_ms
             try:
                 runpy.run_path(str(ROOT / script), run_name="__main__")
             except BaseException as exc:
@@ -143,8 +189,8 @@ class MotorCleanupTests(unittest.TestCase):
         self.assertIn(("music_stop",), events)
         self.assertIn(("write", 0x10, LIGHTS_OFF), events)
         last_stop = max(i for i, e in enumerate(events) if e == ("write", 0x10, STOP))
-        music_stop = events.index(("music_stop",))
-        lights_off = events.index(("write", 0x10, LIGHTS_OFF))
+        music_stop = events.index(("music_stop",), last_stop)
+        lights_off = events.index(("write", 0x10, LIGHTS_OFF), music_stop)
         self.assertLess(last_stop, music_stop)
         self.assertLess(music_stop, lights_off)
         self.assertNotIn(("display", "YES"), events)
@@ -163,7 +209,7 @@ class MotorCleanupTests(unittest.TestCase):
                 self.assertIs(stub.run("main.py"), fault)
                 self.assert_started_stopped(stub)
                 self.assertEqual(stub.motor_commands(),
-                                 [STOP, bytes.fromhex("ff f9 10 04 02 3c 3c 00"), STOP])
+                                 [STOP, bytes.fromhex("ff f9 10 04 02 3c 3c 00"), STOP, STOP])
 
     def test_ball_mode_failure_also_stops(self):
         stub = HardwareStub(fail="camera_mode")
@@ -192,21 +238,24 @@ class MotorCleanupTests(unittest.TestCase):
         self.assertEqual(stub.motor_commands(), [
             STOP, bytes.fromhex("ff f9 10 04 02 3c 1e 00"),
             bytes.fromhex("ff f9 10 04 02 1e 3c 00"), forward,
-            STOP, STOP, forward, STOP])
+            STOP, STOP, forward, STOP, STOP])
 
     def test_demo_normal_motion_and_cleanup(self):
         for script in DEMOS:
             with self.subTest(script=script):
                 stub = HardwareStub()
-                self.assertIsNone(stub.run(script))
+                # The demo now waits for another A after completion. The stub
+                # ends that idle loop; outer fault cleanup then runs once more.
+                self.assertIsInstance(stub.run(script), EndSimulation)
                 self.assert_started_stopped(stub)
                 self.assertEqual(stub.motor_commands()[-1], STOP)
                 self.assertLess(stub.events.index(("write", 0x10, STOP)),
                                 stub.events.index(("music_play",)))
-                self.assertEqual(stub.events[-4:], [
+                success = stub.events.index(("display", "YES"))
+                self.assertEqual(stub.events[success-3:success+1], [
                     ("write", 0x10, STOP), ("music_stop",),
                     ("write", 0x10, LIGHTS_OFF), ("display", "YES")])
-                speeds = [(c[5], c[6], c[7]) for c in stub.motor_commands()[1:-1]]
+                speeds = [(c[5], c[6], c[7]) for c in stub.motor_commands() if c != STOP]
                 expected = ([(60, 60, 0), (60, 60, 2)] * 12
                             if script.endswith("police.py") else [(30, 65, 0), (65, 30, 0)])
                 self.assertEqual(speeds, expected)
