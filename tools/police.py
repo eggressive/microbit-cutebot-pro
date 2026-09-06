@@ -1,11 +1,18 @@
-# Police car demo (2026-09-03): drive a square, flash red/blue headlights,
-# play a two-tone siren on the micro:bit V2 built-in speaker.
-# Camera not needed. Flash with: tools/flash-demo tools/police.py
+# Police car demo with obstacle avoidance (2026-09-05).
+# Drives a square patrol, flashes red/blue headlights, plays a two-tone
+# siren, and pivots away when the ultrasonic sensor sees an obstacle
+# during a side. Camera not needed. Flash with: tools/flash-demo tools/police.py
 #
 # Tuning knobs (measured values, adjust to your floor/battery):
 #   DRIVE_MS  - how long each side of the square is
 #   TURN_MS   - pivot time that lands closest to 90 degrees; tune this first
+#   AVOID_CM  - obstacle distance that triggers a turn
+#   AVOID_TURN_MS - pivot time when avoiding an obstacle
 # Display: P = patrol, arrow = turning, YES = done. Siren loops in background.
+#
+# Sonar note: ultrasonic() returns 0 on no valid echo (blocking, ~100ms).
+# Treat 0 as "clear" and only react to 0 < d < AVOID_CM, so a failed read
+# never triggers a phantom turn.
 
 from cutebot_pro import *
 from microbit import *
@@ -19,6 +26,8 @@ TURN_MS = 560                # ~90 deg pivot at PIVOT speed: TUNE THIS
 SPEED = 60                   # forward speed
 PIVOT = 60                   # pivot speed
 FLASH_MS = 120               # light alternation period
+AVOID_CM = 20                # obstacle distance that triggers a turn
+AVOID_TURN_MS = 560          # pivot time when avoiding an obstacle
 
 
 def police_flash(car, ms, controls):
@@ -35,6 +44,32 @@ def police_flash(car, ms, controls):
             car.singleHeadlights(CutebotProRGBLight.RGBR, 0, 0, 255)   # right blue
         left = not left
         controls.wait(FLASH_MS)
+
+
+def drive_side(car, ms, controls):
+    """Drive forward one side, flashing and polling sonar. Return True if an
+    obstacle was detected (caller pivots away). Sonar is polled every 3rd
+    flash cycle: ultrasonic() is ~60ms (3 reads), and polling every cycle
+    would starve the B/run-limit checks."""
+    end = running_time() + ms
+    left = True
+    tick = 0
+    while running_time() < end:
+        controls.check()
+        if left:
+            car.singleHeadlights(CutebotProRGBLight.RGBL, 255, 0, 0)
+            car.singleHeadlights(CutebotProRGBLight.RGBR, 0, 0, 0)
+        else:
+            car.singleHeadlights(CutebotProRGBLight.RGBL, 0, 0, 0)
+            car.singleHeadlights(CutebotProRGBLight.RGBR, 0, 0, 255)
+        left = not left
+        tick += 1
+        if tick % 3 == 0:
+            d = car.ultrasonic()
+            if 0 < d < AVOID_CM:
+                return True
+        controls.wait(FLASH_MS)
+    return False
 
 
 car = CutebotPro()
@@ -54,7 +89,14 @@ try:
                 for side in range(4):
                     controls.check()
                     car.pwmCruiseControl(SPEED, SPEED)
-                    police_flash(car, DRIVE_MS, controls)
+                    if drive_side(car, DRIVE_MS, controls):
+                        # obstacle: stop, pivot away, then resume the square
+                        car.stopImmediately(CutebotProMotors.ALL)
+                        display.show(Image.ARROW_NE)
+                        car.pwmCruiseControl(PIVOT, -PIVOT)
+                        police_flash(car, AVOID_TURN_MS, controls)
+                        car.pwmCruiseControl(SPEED, SPEED)
+                        display.show("P")
                     controls.check()
                     display.show(Image.ARROW_NE)
                     car.pwmCruiseControl(PIVOT, -PIVOT)

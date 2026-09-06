@@ -155,8 +155,12 @@ class HardwareStub:
         music = types.ModuleType("music")
         music.__dict__.update(play=self.music_play, stop=self.music_stop)
         machine = types.ModuleType("machine")
+        machine.__dict__.update(time_pulse_us=lambda pin, level, timeout: 0)
+        time_mod = types.ModuleType("time")
+        time_mod.__dict__.update(sleep_us=lambda us: None)
         # Restore sys.modules after every execution so no test leaks its stub.
-        with patch.dict(sys.modules, microbit=microbit, music=music, machine=machine):
+        with patch.dict(sys.modules, microbit=microbit, music=music,
+                        machine=machine, time=time_mod):
             for name in ("cutebot_pro", "AILens", "run_controls"):
                 if not (ROOT / (name + ".py")).exists():
                     continue
