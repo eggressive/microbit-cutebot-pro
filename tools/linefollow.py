@@ -15,9 +15,7 @@
 # is the tuning knob; raise it if the car drifts off gentle curves, lower
 # it if it oscillates.
 #
-# Flash with: tools/mbpack tools/ --main linefollow.py, or pack a folder
-# that contains only linefollow-as-main.py + cutebot_pro.py + run_controls.py
-# (no AILens.py needed).
+# Flash with: tools/flash-demo tools/linefollow.py
 
 from microbit import display
 from cutebot_pro import CutebotPro, CutebotProMotors

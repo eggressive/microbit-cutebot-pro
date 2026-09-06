@@ -19,7 +19,7 @@
 #
 # Buttons: A starts a fresh run and clears stop latch, B wins anytime.
 # Camera gate: refuses to arm if the lens is not ready at boot.
-# Flash with: tools/mbpack tools/ --main cardhunt.py
+# Flash with: tools/flash-demo tools/cardhunt.py
 
 from microbit import display, Image, sleep
 from cutebot_pro import CutebotPro, CutebotProMotors
