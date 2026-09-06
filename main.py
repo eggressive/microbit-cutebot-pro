@@ -34,7 +34,7 @@ try:
     while True:
         display.show("A")
         controls.wait_for_start()
-        display.show("B")
+        display.show("G")
         misses = 0
         tick = 0
         try:

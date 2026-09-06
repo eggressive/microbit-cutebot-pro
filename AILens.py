@@ -106,12 +106,15 @@ class AILENS(object):
 
         :return: card content as a string
         """
-        if self.__Data_buff[0] == 2:
-            return numberCards[self.__Data_buff[1] - 1]
-        elif self.__Data_buff[0] == 4:
-            return letterCards[self.__Data_buff[1] - 1]
-        elif self.__Data_buff[0] == 3 and self.__Data_buff[1] < 21:
-            return otherCards[self.__Data_buff[1] - 1]
+        card_type, card_id = self.__Data_buff[0], self.__Data_buff[1]
+        if card_id < 1:
+            return "No Card"
+        if card_type == 2 and card_id <= len(numberCards):
+            return numberCards[card_id - 1]
+        elif card_type == 4 and card_id <= len(letterCards):
+            return letterCards[card_id - 1]
+        elif card_type == 3 and card_id <= len(otherCards):
+            return otherCards[card_id - 1]
         else:
             return "No Card"
 
@@ -130,8 +133,9 @@ class AILENS(object):
 
         :return: color name
         """
-        if self.__Data_buff[0] == 9:
-            return colorList[self.__Data_buff[1] - 1]
+        color_id = self.__Data_buff[1]
+        if self.__Data_buff[0] == 9 and 1 <= color_id <= len(colorList):
+            return colorList[color_id - 1]
         else:
             return "No Color"
 
