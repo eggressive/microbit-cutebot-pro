@@ -6,8 +6,11 @@
 #   Stop       -> brakes and latches stopped until A
 #   Forward    -> 1s at CARD_SPEED
 #   Back       -> 1s reverse
-#   Turn left  -> 500ms pivot in place
+#   Turn left  -> 500ms pivot in place (left wheel back, right wheel forward)
 #   Turn right -> 500ms pivot the other way
+#
+# Note: observed hardware wiring maps "(-, +)" to a left pivot and "(+, -)"
+# to a right pivot; matches main.py's mirrored steering fix.
 #
 # Display: "A" idle / waiting for A press, "C" waiting for a card, the shown
 # card's initial letter while executing a step, "G" when done with a step
@@ -31,8 +34,8 @@ STOP_CARD = "Stop"
 ACTIONS = {
     "Forward": (CARD_SPEED, CARD_SPEED, STEP_MS),
     "Back": (-CARD_SPEED, -CARD_SPEED, STEP_MS),
-    "Turn left": (CARD_SPEED, -CARD_SPEED, TURN_MS),
-    "Turn right": (-CARD_SPEED, CARD_SPEED, TURN_MS),
+    "Turn left": (-CARD_SPEED, CARD_SPEED, TURN_MS),
+    "Turn right": (CARD_SPEED, -CARD_SPEED, TURN_MS),
 }
 DISPLAY_BY_CARD = {
     "Stop": "S",
