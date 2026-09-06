@@ -4,35 +4,48 @@ Run: python3 -m unittest discover -s tests -v
 Covers main.py display letters (running vs idle), AILens.py card/color ID
 bounds, and cutebot_pro.py cm/s to in/s conversion. No physical timing claims.
 """
-import unittest
+import importlib.util
 from pathlib import Path
+import sys
+import types
+import unittest
+from unittest.mock import patch
 
-from test_motor_cleanup import HardwareStub, BALL
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _load_ailens():
-    stub = HardwareStub(frames=iter([BALL]))
-    spec = __import__("importlib.util").util.spec_from_file_location(
-        "AILens_host", ROOT / "AILens.py")
-    module = __import__("importlib.util").util.module_from_spec(spec)
-    import sys
-    sys.modules["microbit"] = __import__("microbit")
-    spec.loader.exec_module(module)
+def _make_microbit():
+    pin = types.SimpleNamespace(write_digital=lambda v: None)
+    microbit = types.ModuleType("microbit")
+    microbit.__dict__.update(
+        i2c=types.SimpleNamespace(init=lambda: None, scan=lambda: [],
+                                  read=lambda a, n: bytes(n), write=lambda a, b: None),
+        sleep=lambda ms: None, running_time=lambda: 0,
+        pin8=pin, pin12=pin,
+        Image=types.SimpleNamespace(ARROW_NE="NE", YES="YES", NO="NO", ARROW_E="E"),
+        display=types.SimpleNamespace(show=lambda x: None, scroll=lambda x: None))
+    return microbit
+
+
+def _load_module(name):
+    spec = importlib.util.spec_from_file_location(name, ROOT / (name + ".py"))
+    module = importlib.util.module_from_spec(spec)
+    with patch.dict(sys.modules, microbit=_make_microbit(), machine=types.ModuleType("machine")):
+        spec.loader.exec_module(module)
     return module
 
 
 def _lens_with_frame(frame):
-    module = _load_ailens()
+    module = _load_module("AILens")
     lens = object.__new__(module.AILENS)
     lens._AILENS__Data_buff = list(frame)
     return lens
 
 
 class DisplayTests(unittest.TestCase):
-    def test_main_running_indicator_is_arrow_not_b_letter(self):
-        src = __import__("pathlib").Path(ROOT / "main.py").read_text()
+    def test_main_running_indicator_is_g_not_b(self):
+        src = (ROOT / "main.py").read_text()
         self.assertIn('display.show("A")', src)
         self.assertNotIn('display.show("B")', src)
         self.assertIn('display.show("G")', src)
@@ -82,17 +95,9 @@ class AILensBoundsTests(unittest.TestCase):
 
 class SpeedConversionTests(unittest.TestCase):
     def _make_car(self, speed_byte):
-        stub = HardwareStub(frames=iter([BALL]))
-        import importlib.util
-        import sys
-        spec = importlib.util.spec_from_file_location(
-            "cutebot_pro_host", ROOT / "cutebot_pro.py")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules["microbit"] = __import__("microbit")
-        spec.loader.exec_module(module)
+        module = _load_module("cutebot_pro")
         car = object.__new__(module.CutebotPro)
-        captured = {}
-        car._cmd = lambda cmd, params: captured.setdefault("cmd", cmd)
+        car._cmd = lambda cmd, params: None
         car._read = lambda n: bytes([speed_byte])
         return module, car
 
