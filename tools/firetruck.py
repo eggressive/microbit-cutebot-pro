@@ -21,37 +21,38 @@ from microbit import *
 import music
 from run_controls import RunControls, RunStopped
 
-# Siren: the CLASSIC Bulgarian children's song "Тръгнал кос" (Targnal kos,
-# lyrics Асен Разцветников), NOT the jazz arrangement in the vault PDF.
-# Melody from two independent solfège transcriptions (BG-mamma forum),
-# transposed to C major (До=C4 tonic). March feel, 2/4.
-#   Сол Ми Ми / Фа Ре Ре / До Ре Ми Фа Сол Сол Сол ...
-# microbit music format: quarter = :4, eighth = :2, half = :8, R = rest.
-# Octave 4 = middle C region; a children's song sits comfortably there.
+# Siren: "Тръгнал кос" (Тръгнал кос, lyrics Асен Разцветников), EXACT
+# transcription from the MuseScore score 7737110 (patrisiyanedy
+# arrangement, C major, 4/4) via its MusicXML (trgnal-kos-...mxl).
+# Durations straight from the file: eighth = :2, quarter = :4
+# (microbit music: 4 ticks per quarter note). Verse = measures 1-8;
+# 9-32 are empty filler rests. Structure per measure:
+#   m1 G4 E4 E4(quarter) | F4 D4 D4(quarter)      "Тръгнал кос с дълъг нос"
+#   m2 C D E F G G G(q)  eighth run               "през гората гол и бос"
+#   m3 = m1, m4 C E G G C(q) R(q)                 "тупа с крак ... юнак"
+#   m5 D D D D D E F(q)   "Ходил, ходил, па се спрял"
+#   m6 E E E E E F G(q)   "три коли мухи изял"
+#   m7 = m1, m8 = m4                              closing
 SIREN = [
-    # "Тръгнал кос с дълъг нос" (Sol Mi Mi / Fa Re Re)
-    "G4:4", "E4:4", "E4:4",
-    "F4:4", "D4:4", "D4:4",
-    # "през гората гол и бос" (До Ре Ми Фа Сол Сол Сол)
-    "C4:4", "D4:4", "E4:4", "F4:4",
-    "G4:2", "G4:2", "G4:4",
-    # "тупа с крак трак-так-так" (repeat opening)
-    "G4:4", "E4:4", "E4:4",
-    "F4:4", "D4:4", "D4:4",
-    # "като същ юнак" (До Ми Сол Сол До До До)
-    "C4:4", "E4:4", "G4:4", "G4:2",
-    "C5:2", "C5:2", "C5:4",
-    # "Ходил, ходил, па се спрял" (Ре Ре Ре Ре Ре Ми Фа)
-    "D5:2", "D5:2", "D5:2", "D5:2", "D5:4", "E5:4", "F5:4",
-    # "три коли мухи изял" (Ми Ми Ми Ми Ми Фа Сол)
-    "E5:2", "E5:2", "E5:2", "E5:2", "E5:4", "F5:4", "G5:4",
-    # "тупнал с крак, тръгнал пак" (Сол Ми Ми / Фа Ре Ре)
-    "G4:4", "E4:4", "E4:4",
-    "F4:4", "D4:4", "D4:4",
-    # "бре-бре, че юнак!" (До Ми Сол Сол До До До)
-    "C4:4", "E4:4", "G4:4", "G4:2",
-    "C5:2", "C5:2", "C5:4",
-    "R:4",                             # breath between verses
+    # m1 "Тръгнал кос с дълъг нос"
+    "G4:2", "E4:2", "E4:4",
+    "F4:2", "D4:2", "D4:4",
+    # m2 "през гората гол и бос"
+    "C4:2", "D4:2", "E4:2", "F4:2", "G4:2", "G4:2", "G4:4",
+    # m3 "тупа с крак трак-так-так"
+    "G4:2", "E4:2", "E4:4",
+    "F4:2", "D4:2", "D4:4",
+    # m4 "като същ юнак"
+    "C4:2", "E4:2", "G4:2", "G4:2", "C4:4", "R:4",
+    # m5 "Ходил, ходил, па се спрял"
+    "D4:2", "D4:2", "D4:2", "D4:2", "D4:2", "E4:2", "F4:4",
+    # m6 "три коли мухи изял"
+    "E4:2", "E4:2", "E4:2", "E4:2", "E4:2", "F4:2", "G4:4",
+    # m7 "тупнал с крак, тръгнал пак"
+    "G4:2", "E4:2", "E4:4",
+    "F4:2", "D4:2", "D4:4",
+    # m8 "бре-бре, че юнак!"
+    "C4:2", "E4:2", "G4:2", "G4:2", "C4:4", "R:4",
 ]
 SIREN_TEMPO = 120  # march tempo for a children's song
 LAPS = 3                     # how many squares to patrol
