@@ -79,7 +79,7 @@ The ball chaser, police and figure-eight demos use the micro:bit's physical butt
 - Held or previously queued A presses do not restart the robot. Release the buttons
   before pressing A again. Button presses during camera initialization are discarded.
 
-The display shows `A` when ready to start. While running, the ball chaser shows `B`
+The display shows `A` when ready to start. While running, the ball chaser shows `G`
 (the stop button), police shows `P`/turn arrows and figure-eight shows `8`. A completed
 police/figure-eight run shows a checkmark and waits for a fresh A press. B or the time
 limit returns it to `A`. Stopping also turns off the police siren and headlights.
