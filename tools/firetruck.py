@@ -32,7 +32,7 @@ TURN_MS = 560                # ~90 deg pivot at PIVOT speed: TUNE THIS
 SPEED = 60                   # forward speed
 PIVOT = 60                   # pivot speed
 FLASH_MS = 120               # light alternation period
-AVOID_CM = 25                # obstacle distance that triggers a turn
+AVOID_CM = 35                # obstacle distance that triggers a turn
 REVERSE_MS = 400             # back up before pivoting away
 AVOID_TURN_MS = 560          # pivot time when avoiding an obstacle
 
