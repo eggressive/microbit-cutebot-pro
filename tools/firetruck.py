@@ -21,28 +21,39 @@ from microbit import *
 import music
 from run_controls import RunControls, RunStopped
 
-# Siren: the Bulgarian folk song "Тръгнал кос" (Targnal kos), transcribed
-# from the sheet music in the vault (02-Areas/Home/Music/Тръгнал_кос_ноти.pdf,
-# Kumanov arrangement, C minor). Basic chords + melody skeleton in microbit
-# music format: quarter = :4, half = :8, whole = :16, R = rest.
-# Octave 5 as written; drop to 4 if the piezo sounds too shrill.
+# Siren: the CLASSIC Bulgarian children's song "Тръгнал кос" (Targnal kos,
+# lyrics Асен Разцветников), NOT the jazz arrangement in the vault PDF.
+# Melody from two independent solfège transcriptions (BG-mamma forum),
+# transposed to C major (До=C4 tonic). March feel, 2/4.
+#   Сол Ми Ми / Фа Ре Ре / До Ре Ми Фа Сол Сол Сол ...
+# microbit music format: quarter = :4, eighth = :2, half = :8, R = rest.
+# Octave 4 = middle C region; a children's song sits comfortably there.
 SIREN = [
-    # phrase 1: the falling opening "Тръгнал кос..."
-    "G5:4", "F5:4", "Eb5:4",          # Тръг-нал кос
-    "D5:4", "F5:4", "G5:8",           # по бе-ли...
-    # phrase 2: the answer
-    "F5:4", "Eb5:4", "D5:4", "C5:4",  # л и-ва-ди
-    "Eb5:4", "D5:4", "C5:4", "Bb4:4", # бе-ли л и-ва-ди
-    "C5:4", "D5:4", "Eb5:4", "F5:4",  # (walk up)
-    # phrase 3: repeat of the opening shape, higher energy
-    "G5:4", "F5:4", "Eb5:4",
-    "D5:4", "F5:4", "G5:8",
-    # phrase 4: close back on the tonic
-    "F5:4", "Eb5:4", "D5:4", "C5:4",
-    "Eb5:4", "D5:4", "C5:4", "Bb4:4",
-    "C5:16", "R:8",                   # long tonic, breath
+    # "Тръгнал кос с дълъг нос" (Sol Mi Mi / Fa Re Re)
+    "G4:4", "E4:4", "E4:4",
+    "F4:4", "D4:4", "D4:4",
+    # "през гората гол и бос" (До Ре Ми Фа Сол Сол Сол)
+    "C4:4", "D4:4", "E4:4", "F4:4",
+    "G4:2", "G4:2", "G4:4",
+    # "тупа с крак трак-так-так" (repeat opening)
+    "G4:4", "E4:4", "E4:4",
+    "F4:4", "D4:4", "D4:4",
+    # "като същ юнак" (До Ми Сол Сол До До До)
+    "C4:4", "E4:4", "G4:4", "G4:2",
+    "C5:2", "C5:2", "C5:4",
+    # "Ходил, ходил, па се спрял" (Ре Ре Ре Ре Ре Ми Фа)
+    "D5:2", "D5:2", "D5:2", "D5:2", "D5:4", "E5:4", "F5:4",
+    # "три коли мухи изял" (Ми Ми Ми Ми Ми Фа Сол)
+    "E5:2", "E5:2", "E5:2", "E5:2", "E5:4", "F5:4", "G5:4",
+    # "тупнал с крак, тръгнал пак" (Сол Ми Ми / Фа Ре Ре)
+    "G4:4", "E4:4", "E4:4",
+    "F4:4", "D4:4", "D4:4",
+    # "бре-бре, че юнак!" (До Ми Сол Сол До До До)
+    "C4:4", "E4:4", "G4:4", "G4:2",
+    "C5:2", "C5:2", "C5:4",
+    "R:4",                             # breath between verses
 ]
-SIREN_TEMPO = 112  # q=112: folk-song lilt, faster than the sheet's q=80 ballad
+SIREN_TEMPO = 120  # march tempo for a children's song
 LAPS = 3                     # how many squares to patrol
 DRIVE_MS = 2500              # side length (~2x the first run)
 TURN_MS = 560                # ~90 deg pivot at PIVOT speed: TUNE THIS
