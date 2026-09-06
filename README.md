@@ -3,6 +3,15 @@
 MicroPython code for the ELECFREAKS Smart Cutebot Pro robot car with the AI Smart Lens
 camera, driven by a BBC micro:bit V2. Programmed and flashed from Linux (Fedora).
 
+## Related projects
+
+- **[cutebot-voice-control-app](https://github.com/eggressive/cutebot-voice-control-app)** - Android app (Kotlin + Vosk) that voice-controls the car over BLE.
+- **[cutebot-voice-control-firmware](https://github.com/eggressive/cutebot-voice-control-firmware)** - MakeCode firmware that maps BLE UART bytes to Cutebot Pro motor commands.
+
+This repo is the base car project (MicroPython drivers + demos). The voice-control
+project moves the firmware to MakeCode (which has a BLE UART service) because
+MicroPython on the micro:bit does not expose BLE usefully.
+
 ## What is in this repo
 
 | File | Purpose |
