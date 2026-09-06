@@ -21,11 +21,28 @@ from microbit import *
 import music
 from run_controls import RunControls, RunStopped
 
-# US fire-truck wail: two-tone alternation between a low and high pitch.
-# E5 (~659 Hz) and A#5/Bb5 (~932 Hz) approximate the classic mechanical
-# Q-siren wail. Fast tempo and short notes blur the pair into a siren sound.
-SIREN = ["E5:4", "A#5:4"]
-SIREN_TEMPO = 240  # beats per minute; fast enough to blur into a wail
+# Siren: the Bulgarian folk song "Тръгнал кос" (Targnal kos), transcribed
+# from the sheet music in the vault (02-Areas/Home/Music/Тръгнал_кос_ноти.pdf,
+# Kumanov arrangement, C minor). Basic chords + melody skeleton in microbit
+# music format: quarter = :4, half = :8, whole = :16, R = rest.
+# Octave 5 as written; drop to 4 if the piezo sounds too shrill.
+SIREN = [
+    # phrase 1: the falling opening "Тръгнал кос..."
+    "G5:4", "F5:4", "Eb5:4",          # Тръг-нал кос
+    "D5:4", "F5:4", "G5:8",           # по бе-ли...
+    # phrase 2: the answer
+    "F5:4", "Eb5:4", "D5:4", "C5:4",  # л и-ва-ди
+    "Eb5:4", "D5:4", "C5:4", "Bb4:4", # бе-ли л и-ва-ди
+    "C5:4", "D5:4", "Eb5:4", "F5:4",  # (walk up)
+    # phrase 3: repeat of the opening shape, higher energy
+    "G5:4", "F5:4", "Eb5:4",
+    "D5:4", "F5:4", "G5:8",
+    # phrase 4: close back on the tonic
+    "F5:4", "Eb5:4", "D5:4", "C5:4",
+    "Eb5:4", "D5:4", "C5:4", "Bb4:4",
+    "C5:16", "R:8",                   # long tonic, breath
+]
+SIREN_TEMPO = 112  # q=112: folk-song lilt, faster than the sheet's q=80 ballad
 LAPS = 3                     # how many squares to patrol
 DRIVE_MS = 2500              # side length (~2x the first run)
 TURN_MS = 560                # ~90 deg pivot at PIVOT speed: TUNE THIS
