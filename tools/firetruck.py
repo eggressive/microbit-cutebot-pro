@@ -21,11 +21,11 @@ from microbit import *
 import music
 from run_controls import RunControls, RunStopped
 
-# Fire-truck wail: a fast rising/falling sweep. High tempo + short notes
-# so it reads as a siren warble, not a melody. Distinct from the police
-# two-tone nino-nino.
-SIREN = ["C5:4", "D5:4", "E5:4", "F5:4", "G5:4", "A5:4", "B5:4",
-         "A5:4", "G5:4", "F5:4", "E5:4", "D5:4"]
+# Fire-truck wail: a tight, fast sweep G5 -> B5 -> G5 (4 semitones),
+# matching the US fire-engine wail in the reference video. High tempo +
+# short notes so it reads as a siren warble, not a melody.
+SIREN = ["G5:4", "G#5:4", "A5:4", "A#5:4", "B5:4",
+         "A#5:4", "A5:4", "G#5:4"]
 SIREN_TEMPO = 240  # beats per minute; fast enough to blur into a wail
 LAPS = 3                     # how many squares to patrol
 DRIVE_MS = 2500              # side length (~2x the first run)
