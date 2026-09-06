@@ -111,7 +111,7 @@ class RunControlsTests(unittest.TestCase):
                 stub = self.simulate(script, a_presses=[(100, 50000)], end_ms=55000)
                 self.assertEqual(stub.events.count(("display", "YES")), 1)
                 moves = movements(stub)
-                self.assertEqual(len(moves), 24 if script.endswith("police.py") else 2)
+                self.assertEqual(len(moves), 24 if script.endswith(("police.py", "firetruck.py")) else 2)
 
     def test_all_demos_enforce_limit_and_allow_explicit_restart(self):
         for script in SCRIPTS:

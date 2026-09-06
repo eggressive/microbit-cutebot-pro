@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 STOP = bytes.fromhex("ff f9 10 04 02 00 00 00")
 LIGHTS_OFF = bytes.fromhex("ff f9 20 04 02 00 00 00")
 BALL = bytes([7, 1, 112, 100, 30, 30, 90, 1, 1])
-DEMOS = ("tools/police.py", "tools/figure8.py")
+DEMOS = ("tools/police.py", "tools/firetruck.py", "tools/figure8.py")
 
 
 class EndSimulation(BaseException):
@@ -261,7 +261,7 @@ class MotorCleanupTests(unittest.TestCase):
                     ("write", 0x10, LIGHTS_OFF), ("display", "YES")])
                 speeds = [(c[5], c[6], c[7]) for c in stub.motor_commands() if c != STOP]
                 expected = ([(60, 60, 0), (60, 60, 2)] * 12
-                            if script.endswith("police.py") else [(30, 65, 0), (65, 30, 0)])
+                            if script.endswith(("police.py", "firetruck.py")) else [(30, 65, 0), (65, 30, 0)])
                 self.assertEqual(speeds, expected)
 
     def test_demo_faults_and_interrupts_cleanup(self):
