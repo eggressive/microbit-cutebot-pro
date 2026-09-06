@@ -21,10 +21,12 @@ from microbit import *
 import music
 from run_controls import RunControls, RunStopped
 
-# Fire-truck wail: a slow chromatic rise then fall, distinct from the
-# police two-tone nino-nino.
-SIREN = ["C5:2", "D5:2", "E5:2", "F5:2", "G5:2", "A5:2",
-         "G5:2", "F5:2", "E5:2", "D5:2"]
+# Fire-truck wail: a fast rising/falling sweep. High tempo + short notes
+# so it reads as a siren warble, not a melody. Distinct from the police
+# two-tone nino-nino.
+SIREN = ["C5:4", "D5:4", "E5:4", "F5:4", "G5:4", "A5:4", "B5:4",
+         "A5:4", "G5:4", "F5:4", "E5:4", "D5:4"]
+SIREN_TEMPO = 240  # beats per minute; fast enough to blur into a wail
 LAPS = 3                     # how many squares to patrol
 DRIVE_MS = 2500              # side length (~2x the first run)
 TURN_MS = 560                # ~90 deg pivot at PIVOT speed: TUNE THIS
@@ -97,6 +99,7 @@ try:
         try:
             controls.check()
             display.show("F")
+            music.set_tempo(ticks=4, bpm=SIREN_TEMPO)
             music.play(SIREN, wait=False, loop=True)
             turn_left = True  # alternate avoidance direction
             for lap in range(LAPS):

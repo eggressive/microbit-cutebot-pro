@@ -153,7 +153,8 @@ class HardwareStub:
             Image=types.SimpleNamespace(ARROW_NE="NE", YES="YES", NO="NO"),
             display=types.SimpleNamespace(show=self.show, scroll=self.show))
         music = types.ModuleType("music")
-        music.__dict__.update(play=self.music_play, stop=self.music_stop)
+        music.__dict__.update(play=self.music_play, stop=self.music_stop,
+                              set_tempo=lambda **kw: None)
         machine = types.ModuleType("machine")
         machine.__dict__.update(time_pulse_us=lambda pin, level, timeout: 0)
         time_mod = types.ModuleType("time")
