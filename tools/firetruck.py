@@ -1,73 +1,77 @@
 # Fire truck demo (2026-09-05). Clone of the police car: same square
-# patrol, obstacle avoidance, and flashing lights, but with a fire-truck
-# wail siren and red/white headlights. Camera not needed.
+# patrol and obstacle avoidance, but with a fire-truck wail siren and
+# red beacon lights. Camera not needed.
 # Flash with: tools/flash-demo tools/firetruck.py
 #
 # Tuning knobs (measured values, adjust to your floor/battery):
 #   DRIVE_MS  - how long each side of the square is
 #   TURN_MS   - pivot time that lands closest to 90 degrees; tune this first
 #   AVOID_CM  - obstacle distance that triggers a turn
+#   REVERSE_MS - how long to back up before pivoting away
 #   AVOID_TURN_MS - pivot time when avoiding an obstacle
 # Display: F = fire patrol, arrow = turning, YES = done. Siren loops.
 #
 # Sonar note: ultrasonic() returns 0 on no valid echo (blocking, ~100ms).
 # Treat 0 as "clear" and only react to 0 < d < AVOID_CM, so a failed read
-# never triggers a phantom turn.
+# never triggers a phantom turn. Two consecutive hits are required before
+# reacting, so a single spurious echo does not cause a phantom turn.
 
 from cutebot_pro import *
 from microbit import *
 import music
 from run_controls import RunControls, RunStopped
 
-# Fire-truck wail: a slow rising then falling sweep, distinct from the
+# Fire-truck wail: a slow chromatic rise then fall, distinct from the
 # police two-tone nino-nino.
-SIREN = ["C5:2", "D5:2", "E5:2", "F5:2", "G5:2", "F5:2", "E5:2", "D5:2"]
+SIREN = ["C5:2", "D5:2", "E5:2", "F5:2", "G5:2", "A5:2",
+         "G5:2", "F5:2", "E5:2", "D5:2"]
 LAPS = 3                     # how many squares to patrol
 DRIVE_MS = 2500              # side length (~2x the first run)
 TURN_MS = 560                # ~90 deg pivot at PIVOT speed: TUNE THIS
 SPEED = 60                   # forward speed
 PIVOT = 60                   # pivot speed
 FLASH_MS = 120               # light alternation period
-AVOID_CM = 20                # obstacle distance that triggers a turn
+AVOID_CM = 25                # obstacle distance that triggers a turn
+REVERSE_MS = 400             # back up before pivoting away
 AVOID_TURN_MS = 560          # pivot time when avoiding an obstacle
 
 
 def fire_flash(car, ms, controls):
-    """Alternate red/white headlights while checking B and the run limit."""
+    """Flash both headlights red together (beacon) while checking B/limit."""
     end = running_time() + ms
-    left = True
+    on = True
     while running_time() < end:
         controls.check()
-        if left:
-            car.singleHeadlights(CutebotProRGBLight.RGBL, 255, 0, 0)   # left red
-            car.singleHeadlights(CutebotProRGBLight.RGBR, 255, 255, 255)  # right white
+        if on:
+            car.singleHeadlights(CutebotProRGBLight.RGBL, 255, 0, 0)
+            car.singleHeadlights(CutebotProRGBLight.RGBR, 255, 0, 0)
         else:
-            car.singleHeadlights(CutebotProRGBLight.RGBL, 255, 255, 255)  # left white
-            car.singleHeadlights(CutebotProRGBLight.RGBR, 255, 0, 0)   # right red
-        left = not left
+            car.singleHeadlights(CutebotProRGBLight.RGBL, 0, 0, 0)
+            car.singleHeadlights(CutebotProRGBLight.RGBR, 0, 0, 0)
+        on = not on
         controls.wait(FLASH_MS)
 
 
 def drive_side(car, ms, controls):
     """Drive forward one side, flashing and polling sonar. Return True if an
-    obstacle was detected (caller pivots away). Sonar is polled every 3rd
-    flash cycle: ultrasonic() is ~60ms (3 reads), and polling every cycle
-    would starve the B/run-limit checks. Two consecutive obstacle readings
-    are required before turning, so a single spurious echo does not cause
-    a phantom turn on a clear floor."""
+    obstacle was detected (caller backs up and pivots away). Sonar is polled
+    every 3rd flash cycle: ultrasonic() is ~60ms (3 reads), and polling every
+    cycle would starve the B/run-limit checks. Two consecutive obstacle
+    readings are required before turning, so a single spurious echo does not
+    cause a phantom turn on a clear floor."""
     end = running_time() + ms
-    left = True
+    on = True
     tick = 0
     hits = 0
     while running_time() < end:
         controls.check()
-        if left:
+        if on:
             car.singleHeadlights(CutebotProRGBLight.RGBL, 255, 0, 0)
-            car.singleHeadlights(CutebotProRGBLight.RGBR, 255, 255, 255)
-        else:
-            car.singleHeadlights(CutebotProRGBLight.RGBL, 255, 255, 255)
             car.singleHeadlights(CutebotProRGBLight.RGBR, 255, 0, 0)
-        left = not left
+        else:
+            car.singleHeadlights(CutebotProRGBLight.RGBL, 0, 0, 0)
+            car.singleHeadlights(CutebotProRGBLight.RGBR, 0, 0, 0)
+        on = not on
         tick += 1
         if tick % 3 == 0:
             d = car.ultrasonic()
@@ -94,15 +98,23 @@ try:
             controls.check()
             display.show("F")
             music.play(SIREN, wait=False, loop=True)
+            turn_left = True  # alternate avoidance direction
             for lap in range(LAPS):
                 for side in range(4):
                     controls.check()
                     car.pwmCruiseControl(SPEED, SPEED)
                     if drive_side(car, DRIVE_MS, controls):
-                        # obstacle: stop, pivot away, then resume the square
+                        # obstacle: back up, pivot away, then resume the square
                         car.stopImmediately(CutebotProMotors.ALL)
                         display.show(Image.ARROW_NE)
-                        car.pwmCruiseControl(PIVOT, -PIVOT)
+                        car.pwmCruiseControl(-SPEED, -SPEED)
+                        fire_flash(car, REVERSE_MS, controls)
+                        car.stopImmediately(CutebotProMotors.ALL)
+                        if turn_left:
+                            car.pwmCruiseControl(PIVOT, -PIVOT)
+                        else:
+                            car.pwmCruiseControl(-PIVOT, PIVOT)
+                        turn_left = not turn_left
                         fire_flash(car, AVOID_TURN_MS, controls)
                         car.pwmCruiseControl(SPEED, SPEED)
                         display.show("F")
