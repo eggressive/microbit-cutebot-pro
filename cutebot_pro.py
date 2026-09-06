@@ -91,7 +91,7 @@ class CutebotPro:
         self._cmd(0xA0, [motor])  # M1=1, M2=2
         sleep(1)
         speed = self._read(1)[0]
-        return speed if speedUnits == CutebotProSpeedUnits.Cms else speed / 0.3937
+        return speed if speedUnits == CutebotProSpeedUnits.Cms else speed / 2.54
 
     def readDistance(self, motor):
         """Wheel rotation in degrees since last clear."""
