@@ -50,10 +50,13 @@ def drive_side(car, ms, controls):
     """Drive forward one side, flashing and polling sonar. Return True if an
     obstacle was detected (caller pivots away). Sonar is polled every 3rd
     flash cycle: ultrasonic() is ~60ms (3 reads), and polling every cycle
-    would starve the B/run-limit checks."""
+    would starve the B/run-limit checks. Two consecutive obstacle readings
+    are required before turning, so a single spurious echo does not cause
+    a phantom turn on a clear floor."""
     end = running_time() + ms
     left = True
     tick = 0
+    hits = 0
     while running_time() < end:
         controls.check()
         if left:
@@ -67,7 +70,11 @@ def drive_side(car, ms, controls):
         if tick % 3 == 0:
             d = car.ultrasonic()
             if 0 < d < AVOID_CM:
-                return True
+                hits += 1
+                if hits >= 2:
+                    return True
+            else:
+                hits = 0
         controls.wait(FLASH_MS)
     return False
 
