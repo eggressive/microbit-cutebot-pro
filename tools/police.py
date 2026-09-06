@@ -7,12 +7,14 @@
 #   DRIVE_MS  - how long each side of the square is
 #   TURN_MS   - pivot time that lands closest to 90 degrees; tune this first
 #   AVOID_CM  - obstacle distance that triggers a turn
+#   REVERSE_MS - how long to back up before pivoting away
 #   AVOID_TURN_MS - pivot time when avoiding an obstacle
 # Display: P = patrol, arrow = turning, YES = done. Siren loops in background.
 #
 # Sonar note: ultrasonic() returns 0 on no valid echo (blocking, ~100ms).
 # Treat 0 as "clear" and only react to 0 < d < AVOID_CM, so a failed read
-# never triggers a phantom turn.
+# never triggers a phantom turn. Two consecutive hits are required before
+# reacting, so a single spurious echo does not cause a phantom turn.
 
 from cutebot_pro import *
 from microbit import *
@@ -26,7 +28,8 @@ TURN_MS = 560                # ~90 deg pivot at PIVOT speed: TUNE THIS
 SPEED = 60                   # forward speed
 PIVOT = 60                   # pivot speed
 FLASH_MS = 120               # light alternation period
-AVOID_CM = 20                # obstacle distance that triggers a turn
+AVOID_CM = 35                # obstacle distance that triggers a turn
+REVERSE_MS = 400             # back up before pivoting away
 AVOID_TURN_MS = 560          # pivot time when avoiding an obstacle
 
 
@@ -48,11 +51,11 @@ def police_flash(car, ms, controls):
 
 def drive_side(car, ms, controls):
     """Drive forward one side, flashing and polling sonar. Return True if an
-    obstacle was detected (caller pivots away). Sonar is polled every 3rd
-    flash cycle: ultrasonic() is ~60ms (3 reads), and polling every cycle
-    would starve the B/run-limit checks. Two consecutive obstacle readings
-    are required before turning, so a single spurious echo does not cause
-    a phantom turn on a clear floor."""
+    obstacle was detected (caller backs up and pivots away). Sonar is polled
+    every 3rd flash cycle: ultrasonic() is ~60ms (3 reads), and polling every
+    cycle would starve the B/run-limit checks. Two consecutive obstacle
+    readings are required before turning, so a single spurious echo does not
+    cause a phantom turn on a clear floor."""
     end = running_time() + ms
     left = True
     tick = 0
@@ -92,15 +95,23 @@ try:
             controls.check()
             display.show("P")
             music.play(SIREN, wait=False, loop=True)
+            turn_left = True  # alternate avoidance direction
             for lap in range(LAPS):
                 for side in range(4):
                     controls.check()
                     car.pwmCruiseControl(SPEED, SPEED)
                     if drive_side(car, DRIVE_MS, controls):
-                        # obstacle: stop, pivot away, then resume the square
+                        # obstacle: back up, pivot away, then resume the square
                         car.stopImmediately(CutebotProMotors.ALL)
                         display.show(Image.ARROW_NE)
-                        car.pwmCruiseControl(PIVOT, -PIVOT)
+                        car.pwmCruiseControl(-SPEED, -SPEED)
+                        police_flash(car, REVERSE_MS, controls)
+                        car.stopImmediately(CutebotProMotors.ALL)
+                        if turn_left:
+                            car.pwmCruiseControl(PIVOT, -PIVOT)
+                        else:
+                            car.pwmCruiseControl(-PIVOT, PIVOT)
+                        turn_left = not turn_left
                         police_flash(car, AVOID_TURN_MS, controls)
                         car.pwmCruiseControl(SPEED, SPEED)
                         display.show("P")
